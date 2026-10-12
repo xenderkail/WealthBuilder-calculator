@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WealthBuilder - Interactive Personal Finance & Compounding Calculator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            900: '#0f172a',
+                            950: '#090d16',
+                        },
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Range Input Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #1e293b;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #10b981;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #34d399;
+        }
+
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Editable Highlight Effect */
+        .editable-active [contenteditable="true"] {
+            outline: 2px dashed #10b981;
+            outline-offset: 4px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.03);
+            cursor: text;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .glass-panel {
+                background: none !important;
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                color: black !important;
+            }
+            .text-slate-400, .text-slate-300 {
+                color: #444 !important;
+            }
+            .text-emerald-400 {
+                color: #059669 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 antialiased selection:bg-emerald-500 selection:text-white">
+
+    <!-- Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-40 backdrop-blur-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                        <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg text-white tracking-tight">WealthBuilder</span>
+                        <span class="hidden sm:inline-block text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full ml-2 border border-emerald-500/20">Pro FX</span>
+                    </div>
+                </div>
+
+                <!-- Currency Selector & Action Controls -->
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                        <label for="currencySelect" class="sr-only">Currency</label>
+                        <select id="currencySelect" class="bg-transparent text-xs text-slate-300 font-medium px-2 py-1 rounded focus:outline-none cursor-pointer">
+                            <option value="$" selected>$ (USD)</option>
+                            <option value="€">€ (EUR)</option>
+                            <option value="£">£ (GBP)</option>
+                            <option value="₹">₹ (INR)</option>
+                            <option value="Rs">Rs (PKR/INR)</option>
+                            <option value="A$">A$ (AUD)</option>
+                        </select>
+                    </div>
+
+                    <button id="saveConfigBtn" title="Save Configuration" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg border border-transparent hover:border-slate-700 transition">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                    </button>
+                    <button id="resetBtn" title="Reset Inputs" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg border border-transparent hover:border-slate-700 transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+        <!-- Tab Navigation -->
+        <div class="flex justify-center mb-8 no-print overflow-x-auto">
+            <div class="bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 flex space-x-1 shadow-inner">
+                <button id="tabAccumulate" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 bg-emerald-500 text-slate-950 shadow-md">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                    <span>Accumulation</span>
+                </button>
+                <button id="tabGoal" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 text-slate-400 hover:text-white">
+                    <i data-lucide="target" class="w-4 h-4"></i>
+                    <span>Goal Planner</span>
+                </button>
+                <button id="tabHelp" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 text-slate-400 hover:text-white relative">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Help & Guide</span>
+                    <span id="editBadge" class="hidden absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[10px] font-bold px-1.5 py-0.5 rounded-full">EDIT</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SECTION: TAB 1 & TAB 2 (Accumulation & Goal Mode) -->
+        <div id="calculatorView">
+            <!-- Visual Metrics Summary Grid -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group border-l-4 border-l-emerald-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Future Net Wealth</p>
+                    <h3 id="metricFutureWealth" class="text-2xl sm:text-3xl font-extrabold text-white mt-2 tracking-tight">$0</h3>
+                    <p id="metricWealthGain" class="text-xs text-emerald-400 font-semibold mt-2 flex items-center">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 mr-1"></i> +0% Total Return
+                    </p>
+                    <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition text-emerald-400">
+                        <i data-lucide="coins" class="w-24 h-24"></i>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group border-l-4 border-l-blue-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Invested Capital</p>
+                    <h3 id="metricTotalInvested" class="text-2xl sm:text-3xl font-extrabold text-white mt-2 tracking-tight">$0</h3>
+                    <p id="metricPrincipalPct" class="text-xs text-slate-400 mt-2">0% of final balance</p>
+                    <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition text-blue-400">
+                        <i data-lucide="wallet" class="w-24 h-24"></i>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group border-l-4 border-l-purple-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Compound Interest</p>
+                    <h3 id="metricTotalInterest" class="text-2xl sm:text-3xl font-extrabold text-purple-400 mt-2 tracking-tight">$0</h3>
+                    <p id="metricInterestPct" class="text-xs text-slate-400 mt-2">0% of final balance</p>
+                    <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition text-purple-400">
+                        <i data-lucide="sparkles" class="w-24 h-24"></i>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group border-l-4 border-l-amber-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Compound Multiplier</p>
+                    <h3 id="metricMultiplier" class="text-2xl sm:text-3xl font-extrabold text-amber-400 mt-2 tracking-tight">1.0x</h3>
+                    <p class="text-xs text-slate-400 mt-2">Growth factor on principal</p>
+                    <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition text-amber-400">
+                        <i data-lucide="zap" class="w-24 h-24"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Interactive Controls & Chart Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- LEFT PANEL: Controls (5 columns) -->
+                <div class="lg:col-span-5 space-y-6">
+                    
+                    <!-- MODE 1: Accumulation Controls -->
+                    <div id="accumulationControls" class="glass-panel p-6 rounded-2xl space-y-5">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <h2 class="font-bold text-white text-base flex items-center space-x-2">
+                                <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+                                <span>Investment Parameters</span>
+                            </h2>
+                            <span class="text-xs text-slate-400">Adjust in real-time</span>
+                        </div>
+
+                        <!-- Starting Capital Input -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-sm">
+                                <label for="initialCapital" class="text-slate-300 font-medium">Initial Capital</label>
+                                <div class="flex items-center space-x-1 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700">
+                                    <span class="currencySymbol text-emerald-400 font-bold">$</span>
+                                    <input type="number" id="initialCapital" value="10000" min="0" step="500" class="w-24 bg-transparent text-right font-semibold text-white focus:outline-none">
+                                </div>
+                            </div>
+                            <input type="range" id="initialCapitalSlider" min="0" max="250000" step="1000" value="10000">
+                        </div>
+
+                        <!-- Monthly Contribution Input -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-sm">
+                                <label for="monthlyContribution" class="text-slate-300 font-medium">Monthly Addition</label>
+                                <div class="flex items-center space-x-1 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700">
+                                    <span class="currencySymbol text-emerald-400 font-bold">$</span>
+                                    <input type="number" id="monthlyContribution" value="500" min="0" step="50" class="w-24 bg-transparent text-right font-semibold text-white focus:outline-none">
+                                </div>
+                            </div>
+                            <input type="range" id="monthlyContributionSlider" min="0" max="10000" step="50" value="500">
+                        </div>
+
+                        <!-- Annual Interest Rate -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-sm">
+                                <label for="interestRate" class="text-slate-300 font-medium">Expected Annual Return</label>
+                                <div class="flex items-center space-x-1 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700">
+                                    <input type="number" id="interestRate" value="8.5" min="0" max="30" step="0.1" class="w-16 bg-transparent text-right font-semibold text-white focus:outline-none">
+                                    <span class="text-emerald-400 font-bold">%</span>
+                                </div>
+                            </div>
+                            <input type="range" id="interestRateSlider" min="1" max="25" step="0.1" value="8.5">
+                        </div>
+
+                        <!-- Time Horizon -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-sm">
+                                <label for="investmentYears" class="text-slate-300 font-medium">Time Horizon</label>
+                                <div class="flex items-center space-x-1 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700">
+                                    <input type="number" id="investmentYears" value="20" min="1" max="50" step="1" class="w-12 bg-transparent text-right font-semibold text-white focus:outline-none">
+                                    <span class="text-slate-400 text-xs">Yrs</span>
+                                </div>
+                            </div>
+                            <input type="range" id="investmentYearsSlider" min="1" max="40" step="1" value="20">
+                        </div>
+
+                        <!-- Compound Frequency -->
+                        <div class="pt-2 border-t border-slate-800">
+                            <label for="compoundFrequency" class="block text-sm font-medium text-slate-300 mb-2">Compounding Interval</label>
+                            <select id="compoundFrequency" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-xl p-2.5 focus:border-emerald-500 focus:outline-none">
+                                <option value="12" selected>Monthly (12x / year)</option>
+                                <option value="4">Quarterly (4x / year)</option>
+                                <option value="2">Semi-Annually (2x / year)</option>
+                                <option value="1">Annually (1x / year)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- MODE 2: Goal Target Controls (Hidden by default) -->
+                    <div id="goalControls" class="glass-panel p-6 rounded-2xl space-y-5 hidden">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <h2 class="font-bold text-white text-base flex items-center space-x-2">
+                                <i data-lucide="compass" class="w-4 h-4 text-amber-400"></i>
+                                <span>Reverse Target Calculation</span>
+                            </h2>
+                            <span class="text-xs text-amber-400 font-medium">Goal Planner</span>
+                        </div>
+
+                        <!-- Target Wealth Input -->
+                        <div class="space-y-2">
+                            <label for="targetGoal" class="block text-sm font-medium text-slate-300">Target Wealth Goal</label>
+                            <div class="flex items-center space-x-2 bg-slate-900 px-3 py-2 rounded-xl border border-slate-700">
+                                <span class="currencySymbol text-amber-400 font-bold">$</span>
+                                <input type="number" id="targetGoal" value="1000000" min="1000" step="10000" class="w-full bg-transparent font-bold text-lg text-white focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Starting Capital -->
+                        <div class="space-y-2">
+                            <label for="goalStartingCapital" class="block text-sm font-medium text-slate-300">Current Starting Balance</label>
+                            <div class="flex items-center space-x-2 bg-slate-900 px-3 py-2 rounded-xl border border-slate-700">
+                                <span class="currencySymbol text-slate-400 font-bold">$</span>
+                                <input type="number" id="goalStartingCapital" value="25000" min="0" step="1000" class="w-full bg-transparent font-semibold text-white focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Return Rate and Years -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="goalReturnRate" class="block text-xs font-medium text-slate-300 mb-1">Expected Return (%)</label>
+                                <input type="number" id="goalReturnRate" value="8.0" min="1" max="25" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label for="goalYears" class="block text-xs font-medium text-slate-300 mb-1">Time Horizon (Yrs)</label>
+                                <input type="number" id="goalYears" value="15" min="1" max="50" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+                            </div>
+                        </div>
+
+                        <!-- Result Box for Goal Mode -->
+                        <div class="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-center">
+                            <p class="text-xs text-amber-300 uppercase tracking-wider font-medium">Required Monthly Savings</p>
+                            <h3 id="requiredMonthlyOutput" class="text-2xl font-black text-amber-400 mt-1">$0.00</h3>
+                            <p class="text-xs text-slate-400 mt-1">Needed to reach target in time</p>
+                        </div>
+                    </div>
+
+                    <!-- Inflation Adjustment Toggle -->
+                    <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-slate-800 rounded-lg text-slate-300">
+                                <i data-lucide="percent" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-white">Adjust for Inflation</p>
+                                <p class="text-xs text-slate-400">Assume ~2.5% inflation impact</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="inflationToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT PANEL: Visual Chart & Analytics (7 columns) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- Interactive Chart Panel -->
+                    <div class="glass-panel p-6 rounded-2xl relative">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 border-b border-slate-800 pb-4">
+                            <div>
+                                <h2 class="font-bold text-white text-base flex items-center space-x-2">
+                                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i>
+                                    <span>Wealth Accumulation Projection</span>
+                                </h2>
+                                <p class="text-xs text-slate-400 mt-0.5">Yearly growth breakdown over time</p>
+                            </div>
+
+                            <!-- Chart Type Switcher -->
+                            <div class="flex items-center space-x-1 bg-slate-900 p-1 rounded-xl border border-slate-800 no-print self-start sm:self-auto">
+                                <button id="btnChartStacked" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition">Stacked</button>
+                                <button id="btnChartLine" class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Lines</button>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Container -->
+                        <div class="relative w-full h-72 sm:h-96">
+                            <canvas id="growthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Milestone Quick Insights -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="glass-panel p-4 rounded-xl flex items-center space-x-3">
+                            <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                                <i data-lucide="award" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium">First $100k Milestone</p>
+                                <p id="milestone100k" class="text-sm font-bold text-white">Calculating...</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-xl flex items-center space-x-3">
+                            <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
+                                <i data-lucide="trending-up" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium">Crossover Point (Interest > Deposit)</p>
+                                <p id="milestoneCrossover" class="text-sm font-bold text-white">Calculating...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Year-by-Year Schedule Table Section -->
+            <section class="mt-10 glass-panel rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-white text-lg flex items-center space-x-2">
+                            <i data-lucide="table" class="w-5 h-5 text-emerald-400"></i>
+                            <span>Year-by-Year Schedule</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Complete annual compounding trajectory</p>
+                    </div>
+
+                    <!-- Export Action Buttons -->
+                    <div class="flex items-center space-x-2 no-print w-full sm:w-auto">
+                        <button id="exportCsvBtn" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            <span>Export CSV</span>
+                        </button>
+                        <button id="printBtn" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/30 transition flex items-center justify-center space-x-1.5">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                            <span>Print Summary</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto max-h-96">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] sm:text-xs tracking-wider sticky top-0 z-10 backdrop-blur-md">
+                            <tr>
+                                <th class="px-6 py-3.5 border-b border-slate-800">Year</th>
+                                <th class="px-6 py-3.5 border-b border-slate-800">Starting Balance</th>
+                                <th class="px-6 py-3.5 border-b border-slate-800">Annual Deposit</th>
+                                <th class="px-6 py-3.5 border-b border-slate-800">Interest Earned</th>
+                                <th class="px-6 py-3.5 border-b border-slate-800">Ending Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+                            <!-- Dynamic Rows Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- SECTION: TAB 3 (Help, Formulas & Compound Multiplier Guide) -->
+        <div id="helpGuideView" class="hidden space-y-8">
+            
+            <!-- Guide Controls Header -->
+            <div class="glass-panel p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-amber-400">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+                        <span>Compounding Masterclass & Guide</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Understanding the mathematics of wealth compounding, multipliers, and long-term exponential growth.</p>
+                </div>
+                
+                <div class="flex items-center space-x-3 no-print">
+                    <button id="toggleEditGuideBtn" class="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-2">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        <span id="editBtnText">Enable Edit Mode</span>
+                    </button>
+                    <button id="resetGuideBtn" title="Reset Guide Content to Default" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editable Guide Content Wrapper -->
+            <div id="guideContentWrapper" class="space-y-8 transition-all">
+
+                <!-- Interactive Multiplier Matrix Tool -->
+                <div class="glass-panel p-6 rounded-2xl space-y-6">
+                    <div class="border-b border-slate-800 pb-4">
+                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
+                            <span>Interactive Compound Multiplier Matrix</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Select an annual return rate to see how $1 compounds across various timeframes.</p>
+                    </div>
+
+                    <!-- Rate Selector Slider for Matrix -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-semibold text-slate-300">Selected Return Rate:</span>
+                            <span id="matrixRateLabel" class="text-base font-extrabold text-emerald-400">8.0%</span>
+                        </div>
+                        <div class="w-full sm:w-64">
+                            <input type="range" id="matrixRateSlider" min="2" max="20" step="0.5" value="8.0">
+                        </div>
+                    </div>
+
+                    <!-- Multiplier Cards Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="multiplierCardsGrid">
+                        <!-- Calculated dynamically via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Guide Topic 1: What is the Compound Multiplier? -->
+                <div class="glass-panel p-6 rounded-2xl space-y-4">
+                    <div class="flex items-center space-x-3 text-emerald-400 font-bold border-b border-slate-800 pb-3">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        <h3 class="text-lg text-white">1. What is the Compound Multiplier?</h3>
+                    </div>
+                    <div class="guide-editable text-sm text-slate-300 leading-relaxed space-y-3">
+                        <p>The <strong>Compound Multiplier</strong> represents how many times your initial principal multiplies over a given period due to interest earning interest on itself.</p>
+                        <p>For example, a multiplier of <strong>4.66x</strong> means every <strong>$1,000</strong> invested initially grows into <strong>$4,660</strong>, without making any additional contributions!</p>
+                        <div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800 font-mono text-xs text-emerald-300">
+                            Multiplier = (1 + r / n) ^ (n * t)
+                        </div>
+                        <p class="text-xs text-slate-400">Where <strong>r</strong> = annual rate, <strong>n</strong> = compounding frequency per year, and <strong>t</strong> = time in years.</p>
+                    </div>
+                </div>
+
+                <!-- Guide Topic 2: The Complete Compound Interest Formula -->
+                <div class="glass-panel p-6 rounded-2xl space-y-4">
+                    <div class="flex items-center space-x-3 text-blue-400 font-bold border-b border-slate-800 pb-3">
+                        <i data-lucide="calculator" class="w-5 h-5"></i>
+                        <h3 class="text-lg text-white">2. The Complete Compound Interest Formula</h3>
+                    </div>
+                    <div class="guide-editable text-sm text-slate-300 leading-relaxed space-y-3">
+                        <p>When you combine a starting principal sum with monthly additions, the total accumulated wealth is calculated using two components: <strong>Principal Compounding</strong> and the <strong>Future Value of an Annuity</strong>.</p>
+                        
+                        <div class="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2 font-mono text-xs text-blue-300">
+                            <p class="font-bold text-white">A = P(1 + r/n)^(nt) + PMT × [((1 + r/n)^(nt) - 1) / (r/n)]</p>
+                        </div>
+
+                        <ul class="list-disc list-inside space-y-1 text-xs text-slate-400 pl-2">
+                            <li><strong>A:</strong> Final accumulated balance</li>
+                            <li><strong>P:</strong> Initial principal investment balance</li>
+                            <li><strong>PMT:</strong> Regular contribution per compounding interval</li>
+                            <li><strong>r:</strong> Annual nominal interest rate (decimal)</li>
+                            <li><strong>n:</strong> Number of times interest is compounded per year</li>
+                            <li><strong>t:</strong> Total time horizon in years</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Guide Topic 3: The Rule of 72 & Inflation Impact -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="glass-panel p-6 rounded-2xl space-y-4">
+                        <div class="flex items-center space-x-3 text-amber-400 font-bold border-b border-slate-800 pb-3">
+                            <i data-lucide="clock" class="w-5 h-5"></i>
+                            <h3 class="text-base text-white">3. The Rule of 72</h3>
+                        </div>
+                        <div class="guide-editable text-xs text-slate-300 leading-relaxed space-y-2">
+                            <p>The <strong>Rule of 72</strong> is a quick mental math shortcut to estimate how many years it takes for an investment to double at a given rate of return.</p>
+                            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 font-mono text-amber-300 text-center">
+                                Years to Double ≈ 72 / Interest Rate
+                            </div>
+                            <p class="text-slate-400">Example: At an <strong>8% annual return</strong>, your money doubles approximately every <strong>9 years</strong> (72 / 8 = 9).</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-2xl space-y-4">
+                        <div class="flex items-center space-x-3 text-purple-400 font-bold border-b border-slate-800 pb-3">
+                            <i data-lucide="percent" class="w-5 h-5"></i>
+                            <h3 class="text-base text-white">4. Real Returns vs. Inflation</h3>
+                        </div>
+                        <div class="guide-editable text-xs text-slate-300 leading-relaxed space-y-2">
+                            <p>Inflation erodes purchasing power over long timeframes. To calculate your <strong>Real Purchasing Power</strong>, subtract expected inflation from nominal returns.</p>
+                            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 font-mono text-purple-300 text-center">
+                                Real Rate ≈ Nominal Return - Inflation Rate
+                            </div>
+                            <p class="text-slate-400">Example: An 8.5% stock market return with 2.5% inflation gives a <strong>6.0% real growth rate</strong>.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Custom Personal Notes Section -->
+                <div class="glass-panel p-6 rounded-2xl space-y-3 border-l-4 border-l-emerald-500">
+                    <div class="flex items-center space-x-2 text-emerald-400 font-bold">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <h3 class="text-base text-white">5. My Personal Wealth Notes & Strategy</h3>
+                    </div>
+                    <div class="guide-editable text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-4 rounded-xl border border-slate-800 min-h-[100px]" id="personalNotesSection">
+                        <p>Click "Enable Edit Mode" above to customize this section with your personal financial goals, asset allocation target (e.g., 80% Index Funds / 20% Bonds), or monthly deposit reminders!</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white border border-slate-700 px-4 py-3 rounded-xl shadow-2xl transition transform translate-y-20 opacity-0 pointer-events-none flex items-center space-x-3 z-50">
+        <div id="toastIcon" class="text-emerald-400">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+        </div>
+        <span id="toastMsg" class="text-xs font-medium">Configuration Saved</span>
+    </div>
+
+    <script>
+        /* MAIN APPLICATION CONTROLLER */
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            // App State Object
+            const state = {
+                currency: '$',
+                initialCapital: 10000,
+                monthlyContribution: 500,
+                interestRate: 8.5,
+                years: 20,
+                compoundFreq: 12,
+                adjustInflation: false,
+                chartType: 'stacked', 
+                activeTab: 'accumulate', // accumulate, goal, or help
+                isEditingGuide: false,
+                
+                // Goal mode state
+                targetGoal: 1000000,
+                goalStarting: 25000,
+                goalRate: 8.0,
+                goalYears: 15,
+
+                // Calculated Results
+                schedule: [],
+                finalBalance: 0,
+                totalInvested: 0,
+                totalInterest: 0
+            };
+
+            // DOM Elements
+            const currencySelect = document.getElementById('currencySelect');
+            const currencySymbols = document.querySelectorAll('.currencySymbol');
+            
+            // Views & Tabs
+            const calculatorView = document.getElementById('calculatorView');
+            const helpGuideView = document.getElementById('helpGuideView');
+            const tabAccumulate = document.getElementById('tabAccumulate');
+            const tabGoal = document.getElementById('tabGoal');
+            const tabHelp = document.getElementById('tabHelp');
+            const accumulationControls = document.getElementById('accumulationControls');
+            const goalControls = document.getElementById('goalControls');
+
+            // Form Inputs & Sliders
+            const initialCapitalInput = document.getElementById('initialCapital');
+            const initialCapitalSlider = document.getElementById('initialCapitalSlider');
+            const monthlyContribInput = document.getElementById('monthlyContribution');
+            const monthlyContribSlider = document.getElementById('monthlyContributionSlider');
+            const interestRateInput = document.getElementById('interestRate');
+            const interestRateSlider = document.getElementById('interestRateSlider');
+            const investmentYearsInput = document.getElementById('investmentYears');
+            const investmentYearsSlider = document.getElementById('investmentYearsSlider');
+            const compoundFreqSelect = document.getElementById('compoundFrequency');
+            const inflationToggle = document.getElementById('inflationToggle');
+
+            // Goal Inputs
+            const targetGoalInput = document.getElementById('targetGoal');
+            const goalStartingInput = document.getElementById('goalStartingCapital');
+            const goalRateInput = document.getElementById('goalReturnRate');
+            const goalYearsInput = document.getElementById('goalYears');
+            const requiredMonthlyOutput = document.getElementById('requiredMonthlyOutput');
+
+            // Metric Display Outputs
+            const metricFutureWealth = document.getElementById('metricFutureWealth');
+            const metricWealthGain = document.getElementById('metricWealthGain');
+            const metricTotalInvested = document.getElementById('metricTotalInvested');
+            const metricPrincipalPct = document.getElementById('metricPrincipalPct');
+            const metricTotalInterest = document.getElementById('metricTotalInterest');
+            const metricInterestPct = document.getElementById('metricInterestPct');
+            const metricMultiplier = document.getElementById('metricMultiplier');
+            const milestone100k = document.getElementById('milestone100k');
+            const milestoneCrossover = document.getElementById('milestoneCrossover');
+
+            // Schedule Table & Controls
+            const scheduleTableBody = document.getElementById('scheduleTableBody');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            const printBtn = document.getElementById('printBtn');
+            const saveConfigBtn = document.getElementById('saveConfigBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Chart Switchers
+            const btnChartStacked = document.getElementById('btnChartStacked');
+            const btnChartLine = document.getElementById('btnChartLine');
+
+            // Guide Tab Elements
+            const toggleEditGuideBtn = document.getElementById('toggleEditGuideBtn');
+            const editBtnText = document.getElementById('editBtnText');
+            const resetGuideBtn = document.getElementById('resetGuideBtn');
+            const editBadge = document.getElementById('editBadge');
+            const guideContentWrapper = document.getElementById('guideContentWrapper');
+            const matrixRateSlider = document.getElementById('matrixRateSlider');
+            const matrixRateLabel = document.getElementById('matrixRateLabel');
+            const multiplierCardsGrid = document.getElementById('multiplierCardsGrid');
+
+            // Chart.js Instance Setup
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            let chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Invested Capital',
+                            data: [],
+                            backgroundColor: '#1e3a8a',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Compound Earnings',
+                            data: [],
+                            backgroundColor: '#065f46',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += formatCurrency(context.parsed.y, state.currency);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#64748b', font: { size: 11 } }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#64748b',
+                                font: { size: 11 },
+                                callback: function(value) {
+                                    return formatCompactNumber(value, state.currency);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Core Calculation Algorithm
+            function calculateWealth() {
+                const P = parseFloat(state.initialCapital) || 0;
+                const PMT = parseFloat(state.monthlyContribution) || 0;
+                let annualRate = (parseFloat(state.interestRate) || 0) / 100;
+                const yrs = parseInt(state.years) || 1;
+                const n = parseInt(state.compoundFreq) || 12;
+
+                if (state.adjustInflation) {
+                    annualRate = Math.max(0, annualRate - 0.025);
+                }
+
+                const r = annualRate;
+                const ratePerPeriod = r / n;
+                
+                let currentBalance = P;
+                let totalInvested = P;
+                const schedule = [];
+
+                let crossoverYear = null;
+                let milestone100kYear = null;
+
+                for (let y = 1; y <= yrs; y++) {
+                    const startYearBalance = currentBalance;
+                    let yearDeposits = 0;
+                    let yearInterest = 0;
+
+                    for (let p = 0; p < n; p++) {
+                        const periodContribution = PMT * (12 / n);
+                        currentBalance += periodContribution;
+                        yearDeposits += periodContribution;
+                        
+                        const interestThisPeriod = currentBalance * ratePerPeriod;
+                        currentBalance += interestThisPeriod;
+                        yearInterest += interestThisPeriod;
+                    }
+
+                    totalInvested += yearDeposits;
+                    const cumulativeInterest = currentBalance - totalInvested;
+
+                    if (currentBalance >= 100000 && !milestone100kYear) {
+                        milestone100kYear = y;
+                    }
+                    if (cumulativeInterest >= totalInvested && !crossoverYear) {
+                        crossoverYear = y;
+                    }
+
+                    schedule.push({
+                        year: y,
+                        startBalance: startYearBalance,
+                        deposits: yearDeposits,
+                        interestEarned: yearInterest,
+                        endBalance: currentBalance,
+                        totalInvested: totalInvested,
+                        totalInterest: cumulativeInterest
+                    });
+                }
+
+                state.schedule = schedule;
+                state.finalBalance = currentBalance;
+                state.totalInvested = totalInvested;
+                state.totalInterest = Math.max(0, currentBalance - totalInvested);
+
+                milestone100k.textContent = milestone100kYear ? `Year ${milestone100kYear}` : 'Not reached in horizon';
+                milestoneCrossover.textContent = crossoverYear ? `Year ${crossoverYear}` : 'Not reached in horizon';
+
+                updateUI();
+            }
+
+            // Goal Planner Calculation
+            function calculateGoalMonthly() {
+                const FV = parseFloat(state.targetGoal) || 0;
+                const PV = parseFloat(state.goalStarting) || 0;
+                const annualRate = (parseFloat(state.goalRate) || 0) / 100;
+                const yrs = parseInt(state.goalYears) || 1;
+                const n = 12;
+
+                const i = annualRate / n;
+                const totalPeriods = yrs * n;
+
+                const compoundPV = PV * Math.pow(1 + i, totalPeriods);
+                const remainingTarget = FV - compoundPV;
+
+                let requiredPMT = 0;
+                if (remainingTarget > 0 && i > 0) {
+                    const annuityFactor = (Math.pow(1 + i, totalPeriods) - 1) / i;
+                    requiredPMT = remainingTarget / annuityFactor;
+                }
+
+                requiredMonthlyOutput.textContent = formatCurrency(Math.max(0, requiredPMT), state.currency);
+            }
+
+            // Update UI Displays
+            function updateUI() {
+                metricFutureWealth.textContent = formatCurrency(state.finalBalance, state.currency);
+                metricTotalInvested.textContent = formatCurrency(state.totalInvested, state.currency);
+                metricTotalInterest.textContent = formatCurrency(state.totalInterest, state.currency);
+
+                const gainPct = state.totalInvested > 0 ? ((state.totalInterest / state.totalInvested) * 100).toFixed(1) : '0';
+                metricWealthGain.innerHTML = `<i data-lucide="arrow-up-right" class="w-3.5 h-3.5 mr-1"></i> +${gainPct}% Total Interest Earned`;
+
+                const principalPct = state.finalBalance > 0 ? ((state.totalInvested / state.finalBalance) * 100).toFixed(0) : '0';
+                const interestPct = state.finalBalance > 0 ? ((state.totalInterest / state.finalBalance) * 100).toFixed(0) : '0';
+
+                metricPrincipalPct.textContent = `${principalPct}% of total balance`;
+                metricInterestPct.textContent = `${interestPct}% of total balance`;
+
+                const mult = state.totalInvested > 0 ? (state.finalBalance / state.totalInvested).toFixed(2) : '1.0';
+                metricMultiplier.textContent = `${mult}x`;
+
+                const labels = state.schedule.map(item => `Yr ${item.year}`);
+                const investedData = state.schedule.map(item => Math.round(item.totalInvested));
+                const interestData = state.schedule.map(item => Math.round(item.totalInterest));
+
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = investedData;
+                chartInstance.data.datasets[1].data = interestData;
+                chartInstance.update();
+
+                renderTable();
+                lucide.createIcons();
+            }
+
+            // Render Schedule Table
+            function renderTable() {
+                scheduleTableBody.innerHTML = '';
+                
+                state.schedule.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/40 transition";
+                    tr.innerHTML = `
+                        <td class="px-6 py-3 font-semibold text-white">Year ${row.year}</td>
+                        <td class="px-6 py-3">${formatCurrency(row.startBalance, state.currency)}</td>
+                        <td class="px-6 py-3 text-blue-400">+${formatCurrency(row.deposits, state.currency)}</td>
+                        <td class="px-6 py-3 text-emerald-400">+${formatCurrency(row.interestEarned, state.currency)}</td>
+                        <td class="px-6 py-3 font-bold text-white">${formatCurrency(row.endBalance, state.currency)}</td>
+                    `;
+                    scheduleTableBody.appendChild(tr);
+                });
+            }
+
+            // Interactive Multiplier Matrix Renderer
+            function renderMultiplierMatrix() {
+                const rate = parseFloat(matrixRateSlider.value) || 8.0;
+                matrixRateLabel.textContent = `${rate.toFixed(1)}%`;
+
+                const yearsList = [5, 10, 15, 20, 25, 30];
+                multiplierCardsGrid.innerHTML = '';
+
+                yearsList.forEach(yr => {
+                    // Multiplier formula: (1 + r)^t
+                    const mult = Math.pow(1 + (rate / 100), yr);
+                    const growsTo1000 = mult * 1000;
+
+                    const card = document.createElement('div');
+                    card.className = "p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-center flex flex-col justify-between";
+                    card.innerHTML = `
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">${yr} Years</span>
+                        <h4 class="text-lg font-black text-amber-400 my-1">${mult.toFixed(2)}x</h4>
+                        <span class="text-[11px] text-emerald-400 font-medium">$1k ➔ ${formatCompactNumber(growsTo1000, state.currency)}</span>
+                    `;
+                    multiplierCardsGrid.appendChild(card);
+                });
+            }
+
+            matrixRateSlider.addEventListener('input', renderMultiplierMatrix);
+
+            // Tab Switching Logic
+            function switchTab(target) {
+                state.activeTab = target;
+
+                // Reset Tab Styles
+                [tabAccumulate, tabGoal, tabHelp].forEach(tab => {
+                    tab.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 text-slate-400 hover:text-white";
+                });
+
+                if (target === 'accumulate') {
+                    tabAccumulate.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 bg-emerald-500 text-slate-950 shadow-md";
+                    calculatorView.classList.remove('hidden');
+                    helpGuideView.classList.add('hidden');
+                    accumulationControls.classList.remove('hidden');
+                    goalControls.classList.add('hidden');
+                } else if (target === 'goal') {
+                    tabGoal.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 bg-amber-500 text-slate-950 shadow-md";
+                    calculatorView.classList.remove('hidden');
+                    helpGuideView.classList.add('hidden');
+                    goalControls.classList.remove('hidden');
+                    accumulationControls.classList.add('hidden');
+                    calculateGoalMonthly();
+                } else if (target === 'help') {
+                    tabHelp.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-2 bg-slate-800 text-amber-400 border border-amber-500/30 shadow-md";
+                    calculatorView.classList.add('hidden');
+                    helpGuideView.classList.remove('hidden');
+                    renderMultiplierMatrix();
+                }
+            }
+
+            tabAccumulate.addEventListener('click', () => switchTab('accumulate'));
+            tabGoal.addEventListener('click', () => switchTab('goal'));
+            tabHelp.addEventListener('click', () => switchTab('help'));
+
+            // Toggle Guide Edit Mode
+            toggleEditGuideBtn.addEventListener('click', () => {
+                state.isEditingGuide = !state.isEditingGuide;
+                const editableElements = document.querySelectorAll('.guide-editable');
+
+                if (state.isEditingGuide) {
+                    guideContentWrapper.classList.add('editable-active');
+                    editBtnText.textContent = "Disable & Save Edits";
+                    toggleEditGuideBtn.className = "px-4 py-2 bg-emerald-500 text-slate-950 border border-emerald-400 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-lg";
+                    editBadge.classList.remove('hidden');
+
+                    editableElements.forEach(el => {
+                        el.setAttribute('contenteditable', 'true');
+                    });
+                    showToast("Edit mode active. Click any text section to edit!");
+                } else {
+                    guideContentWrapper.classList.remove('editable-active');
+                    editBtnText.textContent = "Enable Edit Mode";
+                    toggleEditGuideBtn.className = "px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-2";
+                    editBadge.classList.add('hidden');
+
+                    editableElements.forEach(el => {
+                        el.removeAttribute('contenteditable');
+                    });
+
+                    // Save custom content to local storage
+                    const guideHTML = guideContentWrapper.innerHTML;
+                    localStorage.setItem('wealthBuilderGuideContent', guideHTML);
+                    showToast("Guide edits saved to browser storage!");
+                }
+            });
+
+            // Reset Guide Content to Default
+            resetGuideBtn.addEventListener('click', () => {
+                localStorage.removeItem('wealthBuilderGuideContent');
+                location.reload();
+            });
+
+            // Load saved guide content if exists
+            const savedGuideContent = localStorage.getItem('wealthBuilderGuideContent');
+            if (savedGuideContent) {
+                guideContentWrapper.innerHTML = savedGuideContent;
+                // Re-bind slider event listener since innerHTML was replaced
+                const newSlider = document.getElementById('matrixRateSlider');
+                if (newSlider) {
+                    newSlider.addEventListener('input', renderMultiplierMatrix);
+                }
+            }
+
+            // Input Event Bindings
+            function bindInputAndSlider(inputEl, sliderEl, stateKey) {
+                inputEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    sliderEl.value = val;
+                    state[stateKey] = val;
+                    calculateWealth();
+                });
+
+                sliderEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    inputEl.value = val;
+                    state[stateKey] = val;
+                    calculateWealth();
+                });
+            }
+
+            bindInputAndSlider(initialCapitalInput, initialCapitalSlider, 'initialCapital');
+            bindInputAndSlider(monthlyContribInput, monthlyContribSlider, 'monthlyContribution');
+            bindInputAndSlider(interestRateInput, interestRateSlider, 'interestRate');
+            bindInputAndSlider(investmentYearsInput, investmentYearsSlider, 'years');
+
+            compoundFreqSelect.addEventListener('change', (e) => {
+                state.compoundFreq = parseInt(e.target.value);
+                calculateWealth();
+            });
+
+            inflationToggle.addEventListener('change', (e) => {
+                state.adjustInflation = e.target.checked;
+                calculateWealth();
+            });
+
+            [targetGoalInput, goalStartingInput, goalRateInput, goalYearsInput].forEach(input => {
+                input.addEventListener('input', () => {
+                    state.targetGoal = parseFloat(targetGoalInput.value) || 0;
+                    state.goalStarting = parseFloat(goalStartingInput.value) || 0;
+                    state.goalRate = parseFloat(goalRateInput.value) || 0;
+                    state.goalYears = parseFloat(goalYearsInput.value) || 0;
+                    calculateGoalMonthly();
+                });
+            });
+
+            currencySelect.addEventListener('change', (e) => {
+                state.currency = e.target.value;
+                currencySymbols.forEach(sym => sym.textContent = state.currency);
+                calculateWealth();
+                calculateGoalMonthly();
+                renderMultiplierMatrix();
+            });
+
+            btnChartStacked.addEventListener('click', () => {
+                state.chartType = 'stacked';
+                btnChartStacked.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition";
+                btnChartLine.className = "px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+                
+                chartInstance.config.type = 'bar';
+                chartInstance.options.scales.x.stacked = true;
+                chartInstance.options.scales.y.stacked = true;
+                chartInstance.update();
+            });
+
+            btnChartLine.addEventListener('click', () => {
+                state.chartType = 'line';
+                btnChartLine.className = "px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition";
+                btnChartStacked.className = "px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+
+                chartInstance.config.type = 'line';
+                chartInstance.options.scales.x.stacked = false;
+                chartInstance.options.scales.y.stacked = false;
+                chartInstance.update();
+            });
+
+            exportCsvBtn.addEventListener('click', () => {
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Year,Starting Balance,Annual Contribution,Interest Earned,Ending Balance,Total Invested,Total Interest\n";
+
+                state.schedule.forEach(r => {
+                    csvContent += `${r.year},${r.startBalance.toFixed(2)},${r.deposits.toFixed(2)},${r.interestEarned.toFixed(2)},${r.endBalance.toFixed(2)},${r.totalInvested.toFixed(2)},${r.totalInterest.toFixed(2)}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `wealth_projection_${state.years}_years.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showToast("CSV Projection exported successfully!");
+            });
+
+            printBtn.addEventListener('click', () => {
+                window.print();
+            });
+
+            saveConfigBtn.addEventListener('click', () => {
+                localStorage.setItem('wealthBuilderConfig', JSON.stringify(state));
+                showToast("Configuration saved to browser!");
+                
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                state.initialCapital = 10000;
+                state.monthlyContribution = 500;
+                state.interestRate = 8.5;
+                state.years = 20;
+                state.compoundFreq = 12;
+
+                initialCapitalInput.value = 10000;
+                initialCapitalSlider.value = 10000;
+                monthlyContribInput.value = 500;
+                monthlyContribSlider.value = 500;
+                interestRateInput.value = 8.5;
+                interestRateSlider.value = 8.5;
+                investmentYearsInput.value = 20;
+                investmentYearsSlider.value = 20;
+                compoundFreqSelect.value = "12";
+
+                calculateWealth();
+                showToast("Inputs reset to default.");
+            });
+
+            function showToast(msg) {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toastMsg');
+                toastMsg.textContent = msg;
+
+                toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+                }, 2500);
+            }
+
+            function formatCurrency(amount, symbol) {
+                return symbol + Number(amount).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+            }
+
+            function formatCompactNumber(number, symbol) {
+                return symbol + Intl.NumberFormat('en-US', {
+                    notation: "compact",
+                    maximumFractionDigits: 1
+                }).format(number);
+            }
+
+            calculateWealth();
+            calculateGoalMonthly();
+            renderMultiplierMatrix();
+        });
+    </script>
+</body>
+</html>
