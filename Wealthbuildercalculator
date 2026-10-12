@@ -1,0 +1,83 @@
+# 📈 Kaizen Wealth — Interactive Compound Interest & Goal Planner
+
+**Kaizen Wealth** is a client-side web application designed to help users model long-term financial growth, calculate compound interest multipliers, and reverse-engineer savings goals. Built with modern, zero-dependency web technologies, it features real-time visualizations, customizable guide documentation, and local data persistence.
+
+---
+
+## ✨ Features
+
+- **Interactive Wealth Accumulation Calculator:**
+  - Real-time calculations with synchronized range sliders and numerical inputs.
+  - Visual breakdown of **Total Principal Invested** vs. **Compound Interest Earned**.
+  - Interactive multi-year growth chart powered by Chart.js.
+  - Detailed year-by-year amortized schedule table with one-click **CSV Export**.
+
+- **Reverse Goal Planner:**
+  - Calculate exact required monthly or daily contributions needed to reach a target financial milestone.
+  - Interactive target progress visualizer with dynamic celebratory feedback.
+
+- **Editable Financial Guide & Multiplier Studio:**
+  - In-depth guide explaining **Compound Multipliers**, **The Rule of 72**, **Real vs. Nominal Returns**, and **Dollar-Cost Averaging**.
+  - **Live Content Editing Mode:** Modify guide text directly in the browser to add personalized notes or custom strategies.
+  - Auto-saves custom guide modifications to `localStorage` with a one-click reset option.
+  - **Compound Multiplier Matrix Tool:** Instant lookup table for growth multipliers across custom interest rates and timeframes.
+
+- **Offline-First & Local Storage:**
+  - Auto-saves inputs, preferences, and custom guide edits directly to the browser.
+  - Print-optimized CSS rules for saving clean PDF reports.
+
+---
+
+## 🛠️ Built With
+
+- **HTML5** & **Vanilla JavaScript** (ES6+)
+- **Tailwind CSS** (via CDN for modern UI styling)
+- **Chart.js** (for dynamic wealth projection graphs)
+- **Lucide Icons** (for UI icon set)
+- **Canvas-Confetti** (for goal completion animations)
+
+---
+
+## 🚀 How to Publish on GitHub Pages (Step-by-Step)
+
+Follow these steps to host this web app online for free using GitHub Pages:
+
+### Step 1: Create a New GitHub Repository
+1. Log in to your [GitHub Account](https://github.com).
+2. Click the **`+`** icon in the top-right corner and select **New repository**.
+3. Name your repository (e.g., `kaizen-wealth-calculator`).
+4. Set the repository to **Public**.
+5. Click **Create repository**.
+
+---
+
+### Step 2: Upload Your App Code
+1. On the new repository page, click **uploading an existing file**.
+2. Drag and drop your project files:
+   - `index.html` (the code generated above)
+   - `README.md` (this file)
+3. Under **Commit changes**, type a brief commit message (e.g., `Initial commit`).
+4. Click **Commit changes**.
+
+---
+
+### Step 3: Enable GitHub Pages
+1. Go to the **Settings** tab in your GitHub repository.
+2. In the left sidebar, click **Pages** (under *Code and automation*).
+3. Under **Build and deployment** -> **Branch**:
+   - Change the dropdown from `None` to **`main`** (or `master`).
+   - Leave the folder set to `/(root)`.
+4. Click **Save**.
+
+---
+
+### Step 4: Access Your Live Application
+- Wait 1–2 minutes for GitHub to build and deploy your site.
+- Refresh the **Pages** settings screen. You will see a banner with your live URL:
+  `https://<your-username>.github.io/kaizen-wealth-calculator/`
+
+---
+
+## 📄 License
+
+This project is open-source under the [MIT License](LICENSE). Feel free to fork, customize, and share!
